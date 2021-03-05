@@ -3,8 +3,10 @@
 
 var Fs = require("fs");
 var Os = require("os");
+var Curry = require("bs-platform/lib/js/curry.js");
 var Belt_Int = require("bs-platform/lib/js/belt_Int.js");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
+var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 
 var getToday = (function() {
@@ -15,6 +17,8 @@ var getToday = (function() {
 });
 
 var todosPath = "./todo.txt";
+
+var donePath = "./done.txt";
 
 var encoding = "utf8";
 
@@ -28,6 +32,11 @@ function identifyCommand(cmd, cmdArg) {
     case "del" :
         return {
                 TAG: /* Del */1,
+                _0: Belt_Option.flatMap(cmdArg, Belt_Int.fromString)
+              };
+    case "done" :
+        return {
+                TAG: /* Done */2,
                 _0: Belt_Option.flatMap(cmdArg, Belt_Int.fromString)
               };
     case "help" :
@@ -104,23 +113,46 @@ function add(todo) {
   
 }
 
-function del(task_no) {
-  if (task_no !== undefined) {
+function del(todo_no) {
+  if (todo_no !== undefined) {
     if (!Fs.existsSync(todosPath)) {
       return ;
     }
     var todos = readFrom(todosPath);
-    if (task_no <= todos.length && task_no > 0) {
+    if (todo_no <= todos.length && todo_no > 0) {
       var updatedTodos = todos.filter(function (param, index) {
-            return (index + 1 | 0) !== task_no;
+            return (index + 1 | 0) !== todo_no;
           });
-      console.log("Deleted todo #" + String(task_no));
+      console.log("Deleted todo #" + String(todo_no));
       return writeTo(todosPath, updatedTodos);
     }
-    console.log("Error: todo #" + String(task_no) + " does not exist. Nothing deleted.");
+    console.log("Error: todo #" + String(todo_no) + " does not exist. Nothing deleted.");
     return ;
   }
   console.log("Error: Missing NUMBER for deleting todo.");
+  
+}
+
+function markDone(todo_no) {
+  if (todo_no !== undefined) {
+    if (!Fs.existsSync(todosPath)) {
+      return ;
+    }
+    var todos = readFrom(todosPath);
+    if (todo_no <= todos.length && todo_no > 0) {
+      var completedTodo = "x " + Curry._1(getToday, undefined) + " " + Caml_array.get(todos, todo_no - 1 | 0);
+      appendTo(donePath, completedTodo);
+      var updatedTodos = todos.filter(function (param, index) {
+            return (index + 1 | 0) !== todo_no;
+          });
+      writeTo(todosPath, updatedTodos);
+      console.log("Marked todo #" + String(todo_no) + " as done.");
+      return ;
+    }
+    console.log("Error: todo #" + String(todo_no) + " does not exist.");
+    return ;
+  }
+  console.log("Error: Missing NUMBER for marking todo as done.");
   
 }
 
@@ -131,7 +163,8 @@ var Functions = {
   appendTo: appendTo,
   ls: ls,
   add: add,
-  del: del
+  del: del,
+  markDone: markDone
 };
 
 var cmd = Belt_Option.getWithDefault(Belt_Array.get(process.argv, 2), "help").trim();
@@ -146,13 +179,20 @@ if (typeof cmd$1 === "number") {
   } else {
     ls(undefined);
   }
-} else if (cmd$1.TAG === /* Add */0) {
-  add(cmd$1._0);
 } else {
-  del(cmd$1._0);
+  switch (cmd$1.TAG | 0) {
+    case /* Add */0 :
+        add(cmd$1._0);
+        break;
+    case /* Del */1 :
+        del(cmd$1._0);
+        break;
+    case /* Done */2 :
+        markDone(cmd$1._0);
+        break;
+    
+  }
 }
-
-var donePath = "./done.txt";
 
 exports.getToday = getToday;
 exports.todosPath = todosPath;

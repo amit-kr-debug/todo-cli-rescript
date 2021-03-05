@@ -52,6 +52,7 @@ module CommandAndArguments = {
     | Ls
     | Add(option<string>)
     | Del(option<int>)
+    | Done(option<int>)
 
   let identifyCommand = (~cmd, ~cmdArg): command => {
     switch cmd {
@@ -59,6 +60,7 @@ module CommandAndArguments = {
     | "ls" => Ls
     | "add" => Add(cmdArg)
     | "del" => Del(cmdArg->Belt.Option.flatMap(todo_no => todo_no->Belt.Int.fromString))
+    | "done" => Done(cmdArg->Belt.Option.flatMap(todo_no => todo_no->Belt.Int.fromString))
     | _ => Help
     }
   }
@@ -119,18 +121,37 @@ $ ./todo report           # Statistics`)
     }
   }
 
-  let del = (task_no: option<int>) => {
-    switch task_no {
+  let del = (todo_no: option<int>) => {
+    switch todo_no {
     | None => Js.log("Error: Missing NUMBER for deleting todo.")
-    | Some(task_no) =>
+    | Some(todo_no) =>
       if existsSync(todosPath) {
         let todos = readFrom(todosPath)
-        if task_no <= Belt.Array.length(todos) && task_no > 0 {
-          let updatedTodos = Js.Array.filteri((_, index) => index + 1 != task_no, todos)
-          Js.log(`Deleted todo #${Belt.Int.toString(task_no)}`)
+        if todo_no <= Belt.Array.length(todos) && todo_no > 0 {
+          let updatedTodos = Js.Array.filteri((_, index) => index + 1 != todo_no, todos)
+          Js.log(`Deleted todo #${Belt.Int.toString(todo_no)}`)
           writeTo(todosPath, updatedTodos)
         } else {
-          Js.log(`Error: todo #${Belt.Int.toString(task_no)} does not exist. Nothing deleted.`)
+          Js.log(`Error: todo #${Belt.Int.toString(todo_no)} does not exist. Nothing deleted.`)
+        }
+      }
+    }
+  }
+
+  let markDone = (todo_no: option<int>) => {
+    switch todo_no {
+    | None => Js.log(`Error: Missing NUMBER for marking todo as done.`)
+    | Some(todo_no) =>
+      if existsSync(todosPath) {
+        let todos = readFrom(todosPath)
+        if todo_no <= Belt.Array.length(todos) && todo_no > 0 {
+          let completedTodo = `x ${getToday()} ${todos[todo_no - 1]}`
+          appendTo(donePath, completedTodo)
+          let updatedTodos = Js.Array.filteri((_, index) => index + 1 != todo_no, todos)
+          writeTo(todosPath, updatedTodos)
+          Js.log(`Marked todo #${Belt.Int.toString(todo_no)} as done.`)
+        } else {
+          Js.log(`Error: todo #${Belt.Int.toString(todo_no)} does not exist.`)
         }
       }
     }
@@ -146,4 +167,5 @@ switch cmd {
 | Ls => Functions.ls()
 | Add(todo) => Functions.add(todo)
 | Del(todo_no) => Functions.del(todo_no)
+| Done(todo_no) => Functions.markDone(todo_no)
 }
