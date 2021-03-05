@@ -53,6 +53,7 @@ module CommandAndArguments = {
     | Add(option<string>)
     | Del(option<int>)
     | Done(option<int>)
+    | Report
 
   let identifyCommand = (~cmd, ~cmdArg): command => {
     switch cmd {
@@ -61,6 +62,7 @@ module CommandAndArguments = {
     | "add" => Add(cmdArg)
     | "del" => Del(cmdArg->Belt.Option.flatMap(todo_no => todo_no->Belt.Int.fromString))
     | "done" => Done(cmdArg->Belt.Option.flatMap(todo_no => todo_no->Belt.Int.fromString))
+    | "report" => Report
     | _ => Help
     }
   }
@@ -156,6 +158,27 @@ $ ./todo report           # Statistics`)
       }
     }
   }
+
+  let report = () => {
+    let pendingTodos = if existsSync(todosPath) {
+      let todos = readFrom(todosPath)
+      Belt.Array.length(todos)
+    } else {
+      0
+    }
+    let completedTodos = if existsSync(donePath) {
+      let todos = readFrom(donePath)
+      Belt.Array.length(todos)
+    } else {
+      0
+    }
+
+    Js.log(
+      `${getToday()} Pending : ${Belt.Int.toString(pendingTodos)} Completed : ${Belt.Int.toString(
+          completedTodos,
+        )}`,
+    )
+  }
 }
 
 let cmd = argv->Belt.Array.get(2)->Belt.Option.getWithDefault("help")->Js.String.trim
@@ -168,4 +191,5 @@ switch cmd {
 | Add(todo) => Functions.add(todo)
 | Del(todo_no) => Functions.del(todo_no)
 | Done(todo_no) => Functions.markDone(todo_no)
+| Report => Functions.report()
 }

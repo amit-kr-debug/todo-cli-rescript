@@ -43,6 +43,8 @@ function identifyCommand(cmd, cmdArg) {
         return /* Help */0;
     case "ls" :
         return /* Ls */1;
+    case "report" :
+        return /* Report */2;
     default:
       return /* Help */0;
   }
@@ -156,6 +158,13 @@ function markDone(todo_no) {
   
 }
 
+function report(param) {
+  var pendingTodos = Fs.existsSync(todosPath) ? readFrom(todosPath).length : 0;
+  var completedTodos = Fs.existsSync(donePath) ? readFrom(donePath).length : 0;
+  console.log(Curry._1(getToday, undefined) + " Pending : " + String(pendingTodos) + " Completed : " + String(completedTodos));
+  
+}
+
 var Functions = {
   help: help,
   readFrom: readFrom,
@@ -164,7 +173,8 @@ var Functions = {
   ls: ls,
   add: add,
   del: del,
-  markDone: markDone
+  markDone: markDone,
+  report: report
 };
 
 var cmd = Belt_Option.getWithDefault(Belt_Array.get(process.argv, 2), "help").trim();
@@ -174,10 +184,17 @@ var cmdArg = Belt_Array.get(process.argv, 3);
 var cmd$1 = identifyCommand(cmd, cmdArg);
 
 if (typeof cmd$1 === "number") {
-  if (cmd$1 === /* Help */0) {
-    console.log("Usage :-\n$ ./todo add \"todo item\"  # Add a new todo\n$ ./todo ls               # Show remaining todos\n$ ./todo del NUMBER       # Delete a todo\n$ ./todo done NUMBER      # Complete a todo\n$ ./todo help             # Show usage\n$ ./todo report           # Statistics");
-  } else {
-    ls(undefined);
+  switch (cmd$1) {
+    case /* Help */0 :
+        console.log("Usage :-\n$ ./todo add \"todo item\"  # Add a new todo\n$ ./todo ls               # Show remaining todos\n$ ./todo del NUMBER       # Delete a todo\n$ ./todo done NUMBER      # Complete a todo\n$ ./todo help             # Show usage\n$ ./todo report           # Statistics");
+        break;
+    case /* Ls */1 :
+        ls(undefined);
+        break;
+    case /* Report */2 :
+        report(undefined);
+        break;
+    
   }
 } else {
   switch (cmd$1.TAG | 0) {
