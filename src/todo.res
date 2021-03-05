@@ -51,12 +51,14 @@ module CommandAndArguments = {
     | Help
     | Ls
     | Add(option<string>)
+    | Del(option<int>)
 
   let identifyCommand = (~cmd, ~cmdArg): command => {
     switch cmd {
     | "help" => Help
     | "ls" => Ls
     | "add" => Add(cmdArg)
+    | "del" => Del(cmdArg->Belt.Option.flatMap(todo_no => todo_no->Belt.Int.fromString))
     | _ => Help
     }
   }
@@ -74,12 +76,12 @@ $ ./todo report           # Statistics`)
   }
 
   let readFrom = filePath => {
-    if !existsSync(filePath) {
-      []
-    } else {
+    if existsSync(filePath) {
       let fileContent = readFileSync(filePath, {encoding: encoding, flag: "r"})
       let todos = Js.String.split(eol, fileContent)
       Js.Array.filter(todo => todo !== "", todos)
+    } else {
+      []
     }
   }
 
@@ -89,6 +91,7 @@ $ ./todo report           # Statistics`)
   }
 
   let appendTo = (filePath, todo) => {
+    let todo = todo ++ eol
     appendFileSync(filePath, todo, {encoding: encoding, flag: "a"})
   }
 
@@ -99,9 +102,9 @@ $ ./todo report           # Statistics`)
     | todos =>
       todos
       ->Belt.Array.reverse
-      ->Belt.Array.reduceWithIndex("", (str, todo, index) =>
-        str ++ `[${Belt.Int.toString(Belt.Array.length(todos) - index)}] ${todo} ${eol}`
-      )
+      ->Belt.Array.reduceWithIndex("", (str, todo, index) => {
+        str ++ `[${Belt.Int.toString(Belt.Array.length(todos) - index)}] ${todo}${eol}`
+      })
       ->Js.log
     }
   }
@@ -115,6 +118,23 @@ $ ./todo report           # Statistics`)
       }
     }
   }
+
+  let del = (task_no: option<int>) => {
+    switch task_no {
+    | None => Js.log("Error: Missing NUMBER for deleting todo.")
+    | Some(task_no) =>
+      if existsSync(todosPath) {
+        let todos = readFrom(todosPath)
+        if task_no <= Belt.Array.length(todos) && task_no > 0 {
+          let updatedTodos = Js.Array.filteri((_, index) => index + 1 != task_no, todos)
+          Js.log(`Deleted todo #${Belt.Int.toString(task_no)}`)
+          writeTo(todosPath, updatedTodos)
+        } else {
+          Js.log(`Error: todo #${Belt.Int.toString(task_no)} does not exist. Nothing deleted.`)
+        }
+      }
+    }
+  }
 }
 
 let cmd = argv->Belt.Array.get(2)->Belt.Option.getWithDefault("help")->Js.String.trim
@@ -125,4 +145,5 @@ switch cmd {
 | Help => Functions.help()
 | Ls => Functions.ls()
 | Add(todo) => Functions.add(todo)
+| Del(todo_no) => Functions.del(todo_no)
 }

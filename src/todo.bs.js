@@ -3,6 +3,7 @@
 
 var Fs = require("fs");
 var Os = require("os");
+var Belt_Int = require("bs-platform/lib/js/belt_Int.js");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
 var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 
@@ -20,8 +21,14 @@ var encoding = "utf8";
 function identifyCommand(cmd, cmdArg) {
   switch (cmd) {
     case "add" :
-        return /* Add */{
+        return {
+                TAG: /* Add */0,
                 _0: cmdArg
+              };
+    case "del" :
+        return {
+                TAG: /* Del */1,
+                _0: Belt_Option.flatMap(cmdArg, Belt_Int.fromString)
               };
     case "help" :
         return /* Help */0;
@@ -67,7 +74,8 @@ function writeTo(filePath, todos) {
 }
 
 function appendTo(filePath, todo) {
-  Fs.appendFileSync(filePath, todo, {
+  var todo$1 = todo + Os.EOL;
+  Fs.appendFileSync(filePath, todo$1, {
         encoding: encoding,
         flag: "a"
       });
@@ -78,7 +86,7 @@ function ls(param) {
   var todos = readFrom(todosPath);
   if (todos.length !== 0) {
     console.log(Belt_Array.reduceWithIndex(Belt_Array.reverse(todos), "", (function (str, todo, index) {
-                return str + ("[" + String(todos.length - index | 0) + "] " + todo + " " + Os.EOL);
+                return str + ("[" + String(todos.length - index | 0) + "] " + todo + Os.EOL);
               })));
   } else {
     console.log("There are no pending todos!");
@@ -96,13 +104,34 @@ function add(todo) {
   
 }
 
+function del(task_no) {
+  if (task_no !== undefined) {
+    if (!Fs.existsSync(todosPath)) {
+      return ;
+    }
+    var todos = readFrom(todosPath);
+    if (task_no <= todos.length && task_no > 0) {
+      var updatedTodos = todos.filter(function (param, index) {
+            return (index + 1 | 0) !== task_no;
+          });
+      console.log("Deleted todo #" + String(task_no));
+      return writeTo(todosPath, updatedTodos);
+    }
+    console.log("Error: todo #" + String(task_no) + " does not exist. Nothing deleted.");
+    return ;
+  }
+  console.log("Error: Missing NUMBER for deleting todo.");
+  
+}
+
 var Functions = {
   help: help,
   readFrom: readFrom,
   writeTo: writeTo,
   appendTo: appendTo,
   ls: ls,
-  add: add
+  add: add,
+  del: del
 };
 
 var cmd = Belt_Option.getWithDefault(Belt_Array.get(process.argv, 2), "help").trim();
@@ -112,13 +141,15 @@ var cmdArg = Belt_Array.get(process.argv, 3);
 var cmd$1 = identifyCommand(cmd, cmdArg);
 
 if (typeof cmd$1 === "number") {
-  if (cmd$1 !== 0) {
-    ls(undefined);
-  } else {
+  if (cmd$1 === /* Help */0) {
     console.log("Usage :-\n$ ./todo add \"todo item\"  # Add a new todo\n$ ./todo ls               # Show remaining todos\n$ ./todo del NUMBER       # Delete a todo\n$ ./todo done NUMBER      # Complete a todo\n$ ./todo help             # Show usage\n$ ./todo report           # Statistics");
+  } else {
+    ls(undefined);
   }
-} else {
+} else if (cmd$1.TAG === /* Add */0) {
   add(cmd$1._0);
+} else {
+  del(cmd$1._0);
 }
 
 var donePath = "./done.txt";
