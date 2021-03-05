@@ -38,7 +38,7 @@ external eol: string = "EOL"
 @bs.scope("process") @bs.val
 external argv: array<string> = "argv"
 
-let todoPath = "./todo.txt"
+let todosPath = "./todo.txt"
 let donePath = "./done.txt"
 let encoding = "utf8"
 /*
@@ -50,11 +50,13 @@ module CommandAndArguments = {
   type command =
     | Help
     | Ls
+    | Add(option<string>)
 
-  let identifyCommand = (~cmd: string): command => {
+  let identifyCommand = (~cmd, ~cmdArg): command => {
     switch cmd {
     | "help" => Help
     | "ls" => Ls
+    | "add" => Add(cmdArg)
     | _ => Help
     }
   }
@@ -71,16 +73,56 @@ $ ./todo help             # Show usage
 $ ./todo report           # Statistics`)
   }
 
+  let readFrom = filePath => {
+    if !existsSync(filePath) {
+      []
+    } else {
+      let fileContent = readFileSync(filePath, {encoding: encoding, flag: "r"})
+      let todos = Js.String.split(eol, fileContent)
+      Js.Array.filter(todo => todo !== "", todos)
+    }
+  }
+
+  let writeTo = (filePath, todos) => {
+    let fileContent = Belt.Array.joinWith(todos, eol, todo => todo)
+    writeFileSync(filePath, fileContent, {encoding: encoding, flag: "w"})
+  }
+
+  let appendTo = (filePath, todo) => {
+    appendFileSync(filePath, todo, {encoding: encoding, flag: "a"})
+  }
+
   let ls = () => {
-    Js.log("Need to work on it")
+    let todos = readFrom(todosPath)
+    switch todos {
+    | [] => Js.log("There are no pending todos!")
+    | todos =>
+      todos
+      ->Belt.Array.reverse
+      ->Belt.Array.reduceWithIndex("", (str, todo, index) =>
+        str ++ `[${Belt.Int.toString(Belt.Array.length(todos) - index)}] ${todo} ${eol}`
+      )
+      ->Js.log
+    }
+  }
+
+  let add = (todo: option<string>) => {
+    switch todo {
+    | None => Js.log("Error: Missing todo string. Nothing added!")
+    | Some(todo) => {
+        appendTo(todosPath, todo)
+        Js.log(`Added todo: "${todo}"`)
+      }
+    }
   }
 }
 
 let cmd = argv->Belt.Array.get(2)->Belt.Option.getWithDefault("help")->Js.String.trim
 let cmdArg = argv->Belt.Array.get(3)
-let cmd = CommandAndArguments.identifyCommand(~cmd)
+let cmd = CommandAndArguments.identifyCommand(~cmd, ~cmdArg)
 
 switch cmd {
 | Help => Functions.help()
 | Ls => Functions.ls()
+| Add(todo) => Functions.add(todo)
 }
