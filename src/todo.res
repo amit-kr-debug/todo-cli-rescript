@@ -179,17 +179,20 @@ $ ./todo report           # Statistics`)
         )}`,
     )
   }
+
+  let execute = command => {
+    switch command {
+    | CommandAndArguments.Help => help()
+    | Ls => ls()
+    | Add(todo) => add(todo)
+    | Del(todo_no) => del(todo_no)
+    | Done(todo_no) => markDone(todo_no)
+    | Report => report()
+    }
+  }
 }
 
 let cmd = argv->Belt.Array.get(2)->Belt.Option.getWithDefault("help")->Js.String.trim
 let cmdArg = argv->Belt.Array.get(3)
 let cmd = CommandAndArguments.identifyCommand(~cmd, ~cmdArg)
-
-switch cmd {
-| Help => Functions.help()
-| Ls => Functions.ls()
-| Add(todo) => Functions.add(todo)
-| Del(todo_no) => Functions.del(todo_no)
-| Done(todo_no) => Functions.markDone(todo_no)
-| Report => Functions.report()
-}
+Functions.execute(cmd)

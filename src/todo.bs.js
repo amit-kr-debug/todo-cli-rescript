@@ -165,6 +165,31 @@ function report(param) {
   
 }
 
+function execute(command) {
+  if (typeof command === "number") {
+    switch (command) {
+      case /* Help */0 :
+          console.log("Usage :-\n$ ./todo add \"todo item\"  # Add a new todo\n$ ./todo ls               # Show remaining todos\n$ ./todo del NUMBER       # Delete a todo\n$ ./todo done NUMBER      # Complete a todo\n$ ./todo help             # Show usage\n$ ./todo report           # Statistics");
+          return ;
+      case /* Ls */1 :
+          return ls(undefined);
+      case /* Report */2 :
+          return report(undefined);
+      
+    }
+  } else {
+    switch (command.TAG | 0) {
+      case /* Add */0 :
+          return add(command._0);
+      case /* Del */1 :
+          return del(command._0);
+      case /* Done */2 :
+          return markDone(command._0);
+      
+    }
+  }
+}
+
 var Functions = {
   help: help,
   readFrom: readFrom,
@@ -174,7 +199,8 @@ var Functions = {
   add: add,
   del: del,
   markDone: markDone,
-  report: report
+  report: report,
+  execute: execute
 };
 
 var cmd = Belt_Option.getWithDefault(Belt_Array.get(process.argv, 2), "help").trim();
@@ -183,33 +209,7 @@ var cmdArg = Belt_Array.get(process.argv, 3);
 
 var cmd$1 = identifyCommand(cmd, cmdArg);
 
-if (typeof cmd$1 === "number") {
-  switch (cmd$1) {
-    case /* Help */0 :
-        console.log("Usage :-\n$ ./todo add \"todo item\"  # Add a new todo\n$ ./todo ls               # Show remaining todos\n$ ./todo del NUMBER       # Delete a todo\n$ ./todo done NUMBER      # Complete a todo\n$ ./todo help             # Show usage\n$ ./todo report           # Statistics");
-        break;
-    case /* Ls */1 :
-        ls(undefined);
-        break;
-    case /* Report */2 :
-        report(undefined);
-        break;
-    
-  }
-} else {
-  switch (cmd$1.TAG | 0) {
-    case /* Add */0 :
-        add(cmd$1._0);
-        break;
-    case /* Del */1 :
-        del(cmd$1._0);
-        break;
-    case /* Done */2 :
-        markDone(cmd$1._0);
-        break;
-    
-  }
-}
+execute(cmd$1);
 
 exports.getToday = getToday;
 exports.todosPath = todosPath;
